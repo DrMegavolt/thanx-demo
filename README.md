@@ -77,7 +77,7 @@ Backend verification on October 4, 2026 uses Ruby 3.4.3 and Rails 8.0.2: migrati
 
 `COVERAGE=1 bin/rails test` measures executable lines in `backend/app/` and the API body middleware using Ruby's built-in Coverage library. It writes ignored `backend/coverage/coverage.json` and fails below 95% or when an application file was not loaded. Run the full suite for coverage. Minitest is pinned to 5.25.4 for Rails 8 and its bundled mocking helpers.
 
-[`.github/workflows/backend.yml`](.github/workflows/backend.yml) runs on pushes, pull requests, and manual dispatch. It installs Ruby 3.4.3 with cached locked gems, prepares SQLite, checks autoloading, runs the complete test suite with the 95% coverage gate, and uploads the coverage JSON. The workflow has read-only repository permissions and needs no secrets or database service. Its commands have been verified locally; execution on GitHub awaits pushing the repository.
+[`.github/workflows/backend.yml`](.github/workflows/backend.yml) runs on pushes, pull requests, and manual dispatch. It installs Ruby 3.4.3 with cached locked gems, prepares SQLite, checks autoloading, runs the complete test suite with the 95% coverage gate, and uploads the coverage JSON. The workflow has read-only repository permissions and needs no secrets or database service. See [GitHub Actions](https://github.com/DrMegavolt/thanx-demo/actions) for workflow runs and uploaded coverage reports.
 
 ## Submission
 

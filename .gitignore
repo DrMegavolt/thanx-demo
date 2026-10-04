@@ -12,3 +12,4 @@ backend/storage/*
 !.env.example
 .DS_Store
 backend/coverage/
+ai-session/

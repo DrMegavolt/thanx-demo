@@ -1,0 +1,784 @@
+[
+  {
+    "case": "read /api/balance",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": {
+      "user_id": 4,
+      "name": "Exploratory QA",
+      "points_balance": 250
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/balance None",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "missing_user_header",
+        "message": "The x-user header is required.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/balance 0",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/balance 01",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/balance 1,2",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/balance 999999",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "user_not_found",
+        "message": "User not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "read /api/rewards",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": [
+      {
+        "id": 1,
+        "name": "Free coffee",
+        "description": "A freshly brewed coffee, on us.",
+        "points_cost": 250
+      },
+      {
+        "id": 2,
+        "name": "$5 off your order",
+        "description": "Save on your next visit.",
+        "points_cost": 500
+      },
+      {
+        "id": 3,
+        "name": "Free lunch",
+        "description": "Treat yourself to a lunch favorite.",
+        "points_cost": 1500
+      }
+    ],
+    "allow": null
+  },
+  {
+    "case": "identity /api/rewards None",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "missing_user_header",
+        "message": "The x-user header is required.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/rewards 0",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/rewards 01",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/rewards 1,2",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/rewards 999999",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "user_not_found",
+        "message": "User not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "read /api/redemptions",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": [
+      {
+        "id": 4,
+        "reward_id": 1,
+        "reward_name": "Free coffee",
+        "points_spent": 250,
+        "created_at": "2026-10-04T21:28:56.796Z"
+      }
+    ],
+    "allow": null
+  },
+  {
+    "case": "identity /api/redemptions None",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "missing_user_header",
+        "message": "The x-user header is required.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/redemptions 0",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/redemptions 01",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/redemptions 1,2",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_user_header",
+        "message": "The x-user header must be a positive decimal integer.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "identity /api/redemptions 999999",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "user_not_found",
+        "message": "User not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "health",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": "<!DOCTYPE html><html><body style=\"background-color: green\"></body></html>",
+    "allow": null
+  },
+  {
+    "case": "legacy",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "endpoint_not_found",
+        "message": "API endpoint not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "unknown route",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "endpoint_not_found",
+        "message": "API endpoint not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "method POST /api/balance",
+    "pass": true,
+    "status": 405,
+    "expected_status": 405,
+    "response": {
+      "error": {
+        "code": "method_not_allowed",
+        "message": "This method is not supported.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "method POST /api/rewards",
+    "pass": true,
+    "status": 405,
+    "expected_status": 405,
+    "response": {
+      "error": {
+        "code": "method_not_allowed",
+        "message": "This method is not supported.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "method PUT /api/redemptions",
+    "pass": true,
+    "status": 405,
+    "expected_status": 405,
+    "response": {
+      "error": {
+        "code": "method_not_allowed",
+        "message": "This method is not supported.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "method DELETE /api/redemptions",
+    "pass": true,
+    "status": 405,
+    "expected_status": 405,
+    "response": {
+      "error": {
+        "code": "method_not_allowed",
+        "message": "This method is not supported.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "JSON ''",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_json",
+        "message": "The body must contain valid JSON.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "JSON '{'",
+    "pass": true,
+    "status": 400,
+    "expected_status": 400,
+    "response": {
+      "error": {
+        "code": "invalid_json",
+        "message": "The body must contain valid JSON.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body null",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "body": [
+              "must be a JSON object"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body []",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "body": [
+              "must be a JSON object"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":\"1\"}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":0}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":-1}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":true}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":1.5}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "reward_id": [
+              "must be a positive integer"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":1,\"points_cost\":1}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "points_cost": [
+              "is not allowed"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "body {\"reward_id\":1,\"user_id\":1}",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "invalid_request",
+        "message": "Invalid redemption request.",
+        "details": {
+          "fields": {
+            "user_id": [
+              "is not allowed"
+            ]
+          }
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "media type",
+    "pass": true,
+    "status": 415,
+    "expected_status": 415,
+    "response": {
+      "error": {
+        "code": "unsupported_media_type",
+        "message": "Content-Type must be application/json.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "missing reward",
+    "pass": true,
+    "status": 404,
+    "expected_status": 404,
+    "response": {
+      "error": {
+        "code": "reward_not_found",
+        "message": "Reward not found.",
+        "details": {}
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "inactive reward",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "reward_inactive",
+        "message": "This reward is inactive.",
+        "details": {
+          "reward_id": 4
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "insufficient points",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "insufficient_points",
+        "message": "You do not have enough points to redeem this reward.",
+        "details": {
+          "points_balance": 250,
+          "points_required": 1500
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "zero balance",
+    "pass": true,
+    "status": 422,
+    "expected_status": 422,
+    "response": {
+      "error": {
+        "code": "insufficient_points",
+        "message": "You do not have enough points to redeem this reward.",
+        "details": {
+          "points_balance": 0,
+          "points_required": 250
+        }
+      }
+    },
+    "allow": null
+  },
+  {
+    "case": "QA unchanged balance",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": {
+      "user_id": 4,
+      "name": "Exploratory QA",
+      "points_balance": 250
+    },
+    "allow": null
+  },
+  {
+    "case": "QA unchanged history",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": [
+      {
+        "id": 4,
+        "reward_id": 1,
+        "reward_name": "Free coffee",
+        "points_spent": 250,
+        "created_at": "2026-10-04T21:28:56.796Z"
+      }
+    ],
+    "allow": null
+  },
+  {
+    "case": "four concurrent live HTTP redemptions",
+    "pass": true,
+    "statuses": [
+      201,
+      201,
+      422,
+      422
+    ],
+    "responses": [
+      {
+        "redemption": {
+          "id": 6,
+          "reward_id": 1,
+          "reward_name": "Free coffee",
+          "points_spent": 250,
+          "created_at": "2026-10-04T21:30:14.046Z"
+        },
+        "points_balance": 0
+      },
+      {
+        "error": {
+          "code": "insufficient_points",
+          "message": "You do not have enough points to redeem this reward.",
+          "details": {
+            "points_balance": 0,
+            "points_required": 250
+          }
+        }
+      },
+      {
+        "redemption": {
+          "id": 5,
+          "reward_id": 1,
+          "reward_name": "Free coffee",
+          "points_spent": 250,
+          "created_at": "2026-10-04T21:30:14.044Z"
+        },
+        "points_balance": 250
+      },
+      {
+        "error": {
+          "code": "insufficient_points",
+          "message": "You do not have enough points to redeem this reward.",
+          "details": {
+            "points_balance": 0,
+            "points_required": 250
+          }
+        }
+      }
+    ]
+  },
+  {
+    "case": "concurrent final balance",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": {
+      "user_id": 5,
+      "name": "Concurrent QA",
+      "points_balance": 0
+    },
+    "allow": null
+  },
+  {
+    "case": "concurrent final history",
+    "pass": true,
+    "status": 200,
+    "expected_status": 200,
+    "response": [
+      {
+        "id": 6,
+        "reward_id": 1,
+        "reward_name": "Free coffee",
+        "points_spent": 250,
+        "created_at": "2026-10-04T21:30:14.046Z"
+      },
+      {
+        "id": 5,
+        "reward_id": 1,
+        "reward_name": "Free coffee",
+        "points_spent": 250,
+        "created_at": "2026-10-04T21:30:14.044Z"
+      }
+    ],
+    "allow": null
+  },
+  {
+    "case": "concurrent atomicity",
+    "pass": true
+  }
+]

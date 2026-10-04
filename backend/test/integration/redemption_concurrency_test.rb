@@ -7,6 +7,9 @@ class RedemptionConcurrencyTest < ActionDispatch::IntegrationTest
   self.use_transactional_tests = false
 
   setup do
+    # Local tests load Rails 8 routes lazily. Finish loading on the main thread
+    # before competing requests can observe an incomplete route table.
+    Rails.application.reload_routes_unless_loaded
     clean_records
     @user = create_user(balance: 500)
     @reward = create_reward(cost: 250)

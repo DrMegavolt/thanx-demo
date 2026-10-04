@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+require_relative "../test/support/coverage" if ENV["COVERAGE"] == "1" && ARGV.first&.start_with?("test")
+APP_PATH = File.expand_path("../config/application", __dir__)
+require_relative "../config/boot"
+require "rails/commands"

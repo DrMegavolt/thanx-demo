@@ -1,0 +1,45 @@
+name: Backend
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RAILS_ENV: test
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.3"
+          working-directory: backend
+          bundler-cache: true
+      - name: Prepare SQLite database
+        run: bin/rails db:prepare
+      - name: Check autoloading
+        run: bin/rails zeitwerk:check
+      - name: Run unit and integration tests (minimum 95% line coverage)
+        run: bin/rails test
+        env:
+          COVERAGE: "1"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage/coverage.json
+          if-no-files-found: warn
+          retention-days: 14

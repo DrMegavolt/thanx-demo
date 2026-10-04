@@ -1,0 +1,14 @@
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+backend/.bundle/
+backend/vendor/bundle/
+backend/log/*
+backend/tmp/*
+backend/storage/*
+!backend/storage/.keep
+.env
+.env.*
+!.env.example
+.DS_Store
+backend/coverage/

@@ -24,4 +24,12 @@ end
 
 class ActiveSupport::TestCase
   include TestRecords
+
+  # db:prepare loads demo seeds on a fresh database. Each test must own its
+  # records regardless of database setup or randomized test order.
+  setup do
+    Redemption.delete_all
+    Reward.delete_all
+    User.delete_all
+  end
 end

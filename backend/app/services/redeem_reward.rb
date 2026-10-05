@@ -2,8 +2,6 @@ class RedeemReward
   Result = Data.define(:redemption, :points_balance)
 
   def self.call(user_id:, reward_id:, idempotency_key:)
-    # Use the same ID casting for lookup and replay (e.g. 1 and "1").
-    reward_id = Reward.type_for_attribute("id").cast(reward_id)
     unless idempotency_key.is_a?(String) && Redemption::UUID_V4.match?(idempotency_key)
       raise Api::Error.new("invalid_idempotency_key", "Idempotency-Key must be a UUID v4.", status: 400)
     end

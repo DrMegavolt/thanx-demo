@@ -7,7 +7,7 @@ at_exit do
   require "fileutils"
   root = File.expand_path("../..", __dir__)
   results = Coverage.result
-  files = Dir["#{root}/app/**/*.rb", "#{root}/lib/api_request_body.rb"].sort.to_h do |path|
+  files = Dir["#{root}/app/**/*.rb"].sort.to_h do |path|
     lines = results.fetch(path, {}).fetch(:lines, [])
     counts = lines.compact
     [path.delete_prefix("#{root}/"), {

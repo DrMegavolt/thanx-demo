@@ -498,7 +498,7 @@ describe('redemption', () => {
     expect(loadAttempt()).toBeNull()
   })
 
-  it('keeps a conflicting key and blocks starting a replacement purchase', async () => {
+  it('keeps a conflicting key until the user explicitly discards after checking history', async () => {
     const user = userEvent.setup()
     post = async () =>
       Response.json(
@@ -510,7 +510,7 @@ describe('redemption', () => {
       screen.getByRole('button', { name: 'Confirm · 250 points' }),
     )
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Its key cannot safely be replaced.',
+      'The saved request conflicts with another reward.',
     )
     expect(loadAttempt()?.key).toBe(
       new Headers(posts()[0][1]?.headers).get('Idempotency-Key'),
@@ -519,6 +519,25 @@ describe('redemption', () => {
       screen.getByRole('button', { name: 'Confirm · 250 points' }),
     ).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+    await user.click(
+      screen.getByRole('button', { name: /Discard saved request/ }),
+    )
+    await waitFor(() => expect(loadAttempt()).toBeNull())
+    expect(screen.getByRole('button', { name: 'Select user' })).toBeEnabled()
+    expect(posts()).toHaveLength(1)
+    post = async () =>
+      Response.json(
+        { redemption: newRedemption, points_balance: 750 },
+        { status: 201 },
+      )
+    await user.click(
+      await screen.findByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    await screen.findByText('Free coffee is yours!')
+    expect(posts()).toHaveLength(2)
+    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).not.toBe(
+      new Headers(posts()[0][1]?.headers).get('Idempotency-Key'),
+    )
   })
 
   it('uses a new key for a genuinely new redemption', async () => {
@@ -571,6 +590,29 @@ describe('redemption', () => {
     ).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
     expect(posts()).toHaveLength(0)
+    const user = userEvent.setup()
+    const removeItem = vi
+      .spyOn(Storage.prototype, 'removeItem')
+      .mockImplementation(() => {
+        throw new DOMException('Storage unavailable')
+      })
+    await user.click(
+      screen.getByRole('button', { name: /Discard saved request/ }),
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Allow site storage')
+    expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+    removeItem.mockRestore()
+    await user.click(
+      screen.getByRole('button', { name: /Discard saved request/ }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Select user' })).toBeEnabled(),
+    )
+    expect(sessionStorage.getItem(ATTEMPT_STORAGE_KEY)).toBeNull()
+    expect(posts()).toHaveLength(0)
+    expect(
+      await screen.findByRole('button', { name: 'Confirm · 250 points' }),
+    ).toBeEnabled()
   })
 
   it.each(['1', '2'])(

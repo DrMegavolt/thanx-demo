@@ -2,8 +2,9 @@ User.find_or_create_by!(name: "Alex Morgan") do |user|
   user.points_balance = 1250
 end
 
-# Stable IDs match frontend/public/reward_{id}.png. Refresh the demo catalog
-# on reruns; redemption snapshots preserve the original name and points spent.
+# The catalog migration installs these rows for db:migrate. Keep them here
+# too because db:prepare can load schema.rb directly on a fresh database.
+# Stable IDs match frontend/public/reward_{id}.png; snapshots stay unchanged.
 [
   { id: 1, name: "Free coffee", description: "Any size drip coffee, on us. A fresh cup to brighten your day.", points_cost: 250 },
   { id: 2, name: "$10 off your order", description: "$10 off your next order. Good on anything you love.", points_cost: 1000 },

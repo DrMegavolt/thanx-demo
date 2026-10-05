@@ -58,6 +58,20 @@ class InvariantsTest < ActiveSupport::TestCase
     end
   end
 
+  test "database restricts reward availability to zero or one" do
+    reward = create_reward
+    ["2", "-1", "0.5", "'invalid'"].each do |value|
+      assert_raises(ActiveRecord::StatementInvalid) do
+        ApplicationRecord.connection.execute("UPDATE rewards SET active = #{value} WHERE id = #{reward.id}")
+      end
+    end
+    [0, 1].each do |value|
+      ApplicationRecord.connection.execute("UPDATE rewards SET active = #{value} WHERE id = #{reward.id}")
+      assert_equal value == 1, reward.reload.active?
+      assert_equal value == 1, Reward.where(active: true).exists?(reward.id)
+    end
+  end
+
   test "history requires existing user and reward and prevents their deletion" do
     user = create_user
     reward = create_reward

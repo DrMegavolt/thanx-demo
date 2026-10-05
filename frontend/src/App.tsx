@@ -108,6 +108,19 @@ export default function App() {
             </button>
           </div>
         )}
+        {(redemption.storageError || redemption.attempt) &&
+          !redemption.pending && (
+            <div className="notice">
+              <p>
+                Check History for the original demo user before discarding. A
+                completed redemption stays charged; your next purchase uses a
+                new request and may charge again.
+              </p>
+              <button className="button outline" onClick={redemption.discard}>
+                Discard saved request (I’ve checked my history)
+              </button>
+            </div>
+          )}
         {loadError && (
           <div className="notice error" role="alert">
             <p>{loadError}</p>

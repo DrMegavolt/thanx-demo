@@ -33,6 +33,7 @@ type RedemptionAction =
   | { type: 'finish' }
   | { type: 'navigate'; rewardId?: number }
   | { type: 'reset' }
+  | { type: 'discard' }
 
 function initialState(): RedemptionState {
   const state: RedemptionState = {
@@ -50,7 +51,7 @@ function initialState(): RedemptionState {
     return {
       ...state,
       storageError:
-        'Unable to read the saved redemption. Restore browser storage before redeeming again.',
+        'Unable to read the saved redemption. Check your history before discarding the saved request.',
     }
   }
 }
@@ -94,6 +95,15 @@ export function redemptionReducer(
             ? state.success
             : null,
         redeemError: '',
+      }
+    case 'discard':
+      return {
+        ...state,
+        attempt: null,
+        storageError: '',
+        redeemError: '',
+        success: null,
+        revision: state.revision + 1,
       }
     case 'reset':
       return { ...state, success: null, redeemError: '' }
@@ -185,7 +195,7 @@ export function useRedemption() {
           clearAttempt()
         } catch {
           storageError =
-            'Unable to clear the saved redemption. Restore browser storage and retry the saved request.'
+            'Unable to clear the saved redemption. Allow site storage in your browser settings, then retry the saved request.'
         }
         dispatch({ type: 'reject', error: errorMessage(error), storageError })
       } else {
@@ -193,7 +203,7 @@ export function useRedemption() {
           type: 'uncertain',
           error:
             error instanceof ApiError && error.code === 'idempotency_conflict'
-              ? 'The saved request conflicts with another reward. Its key cannot safely be replaced.'
+              ? 'The saved request conflicts with another reward. Check your history before discarding the saved request.'
               : 'We couldn’t confirm your redemption. Retry the saved request to safely confirm its result.',
         })
       }
@@ -232,9 +242,34 @@ export function useRedemption() {
     await submitAttempt(current)
   }
 
+  function discard() {
+    if (submitting.current || state.pending) return
+    try {
+      clearAttempt()
+      // Do not unlock if storage remains inaccessible or still has a request.
+      if (loadAttempt()) throw new Error('Saved request remains.')
+      dispatch({ type: 'discard' })
+    } catch {
+      dispatch({
+        type: 'storage-error',
+        error:
+          'Unable to discard the saved request. Allow site storage in your browser settings, then try again.',
+      })
+    }
+  }
+
   async function retry() {
     if (state.attempt) await submitAttempt(state.attempt)
   }
 
-  return { ...state, uncertain, identityLocked, navigate, reset, redeem, retry }
+  return {
+    ...state,
+    uncertain,
+    identityLocked,
+    navigate,
+    reset,
+    redeem,
+    retry,
+    discard,
+  }
 }

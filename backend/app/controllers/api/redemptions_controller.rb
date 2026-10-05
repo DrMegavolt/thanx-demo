@@ -8,7 +8,13 @@ module Api
       unless request.media_type == "application/json"
         raise Api::Error.new("unsupported_media_type", "Content-Type must be application/json.", status: 415)
       end
-      reward_id = params.permit(:reward_id)[:reward_id]
+      # Body parameters only: query strings must never select the purchase.
+      reward_id = request.request_parameters["reward_id"]
+      unless (reward_id.is_a?(Integer) && reward_id.positive?) ||
+          (reward_id.is_a?(String) && /\A[1-9][0-9]*\z/.match?(reward_id))
+        raise Api::Error.new("invalid_request", "reward_id must be a positive decimal integer in the JSON body.", status: 422)
+      end
+      reward_id = reward_id.to_i
       key = request.headers["Idempotency-Key"]
       if key.blank?
         raise Api::Error.new("missing_idempotency_key", "The Idempotency-Key header is required.", status: 400)

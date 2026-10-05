@@ -77,15 +77,34 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_equal 0, Redemption.count
   end
 
-  test "POST looks up reward IDs rather than validating positivity or body shape" do
+  test "POST rejects invalid body reward IDs without mutation" do
     ["", "{}", "[]", "null", '{"reward_id": null}', '{"reward_id": 0}',
       '{"reward_id": -1}', '{"reward_id": "missing"}', '{"reward_id": []}',
-      '{"reward_id": {"id": 1}}'].each do |body|
+      '{"reward_id": {"id": 1}}', '{"reward_id": true}', '{"reward_id": false}',
+      '{"reward_id": 1.9}', '{"reward_id": "1abc"}', '{"reward_id": "2 cats"}',
+      '{"reward_id": "01"}', '{"reward_id": " 1"}'].each do |body|
       post "/api/redemptions", params: body, headers: @headers
-      assert_error 404, "reward_not_found"
+      assert_error 422, "invalid_request"
     end
     assert_equal 500, @user.reload.points_balance
     assert_equal 0, Redemption.count
+  end
+
+  test "query reward IDs cannot override or supply the JSON purchase" do
+    other_reward = create_reward(cost: 50)
+    post "/api/redemptions?reward_id=#{other_reward.id}", params: { reward_id: @reward.id }.to_json, headers: @headers
+    assert_response :created
+    assert_equal @reward.id, response.parsed_body.dig("redemption", "reward_id")
+    assert_equal 250, @user.reload.points_balance
+    post "/api/redemptions?reward_id=#{other_reward.id}", params: "{}", headers: @headers
+    assert_error 422, "invalid_request"
+    assert_equal 250, @user.reload.points_balance
+    assert_equal 1, Redemption.count
+  end
+
+  test "identity is checked before parsing a malformed body" do
+    post "/api/redemptions", params: "{", headers: @headers.except("x-user")
+    assert_error 400, "missing_user_header"
   end
 
   test "POST ignores extra fields and numeric string IDs replay the same redemption" do

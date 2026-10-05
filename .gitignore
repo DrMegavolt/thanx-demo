@@ -14,3 +14,6 @@ backend/storage/*
 backend/coverage/
 frontend/coverage/
 ai-session/
+
+.v2c/
+.video_agent/

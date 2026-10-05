@@ -27,7 +27,7 @@ export function loadAttempt(): RedemptionAttempt | null {
     )
   ) {
     throw new Error(
-      'Unable to read the saved redemption. Restore browser storage before redeeming again.',
+      'Unable to read the saved redemption. Check your history before discarding the saved request.',
     )
   }
   return value as RedemptionAttempt

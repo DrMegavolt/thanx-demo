@@ -67,29 +67,28 @@ class RedeemRewardTest < ActiveSupport::TestCase
     assert_equal 0, Redemption.count
   end
 
-  test "transient contention retries the whole transaction without charging twice" do
+  test "busy failure after the debit rolls back without retrying" do
     attempts = 0
     callback = ->(_record) do
       attempts += 1
-      if attempts == 1
-        begin
-          raise SQLite3::BusyException, "locked"
-        rescue SQLite3::BusyException
-          raise ActiveRecord::StatementInvalid, "locked"
-        end
+      begin
+        raise SQLite3::BusyException, "locked"
+      rescue SQLite3::BusyException
+        raise ActiveRecord::StatementInvalid, "locked"
       end
     end
     Redemption.set_callback(:create, :before, callback)
-    result = RedeemReward.call(user_id: @user.id, reward_id: @reward.id, idempotency_key: SecureRandom.uuid)
-    assert_equal 2, attempts
-    assert_equal 250, result.points_balance
-    assert_equal 250, @user.reload.points_balance
-    assert_equal 1, Redemption.count
+    error = assert_raises(Api::Error) { RedeemReward.call(user_id: @user.id, reward_id: @reward.id, idempotency_key: SecureRandom.uuid) }
+    assert_equal "service_unavailable", error.code
+    assert_equal 503, error.status
+    assert_equal 1, attempts
+    assert_equal 500, @user.reload.points_balance
+    assert_equal 0, Redemption.count
   ensure
     Redemption.skip_callback(:create, :before, callback)
   end
 
-  test "retries busy and locked failures only up to the bound" do
+  test "busy and locked failures return 503 after one transaction attempt" do
     [SQLite3::BusyException, SQLite3::LockedException].each do |exception_class|
       attempts = 0
       operation = ->(*) do
@@ -105,7 +104,7 @@ class RedeemRewardTest < ActiveSupport::TestCase
         assert_equal "service_unavailable", error.code
         assert_equal 503, error.status
       end
-      assert_equal RedeemReward::MAX_ATTEMPTS, attempts
+      assert_equal 1, attempts
     end
     assert_equal 500, @user.reload.points_balance
     assert_equal 0, Redemption.count

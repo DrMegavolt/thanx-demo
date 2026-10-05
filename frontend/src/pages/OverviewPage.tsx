@@ -44,7 +44,7 @@ export function OverviewPage({
           <h2>Your latest redemption</h2>
           {latestRedemption ? (
             <div className="latest-row">
-              <RewardArt name={latestRedemption.reward_name} small />
+              <RewardArt rewardId={latestRedemption.reward_id} small />
               <div>
                 <h3>{latestRedemption.reward_name}</h3>
                 <p>{points(latestRedemption.points_spent)} points</p>

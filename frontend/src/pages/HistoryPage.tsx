@@ -47,7 +47,7 @@ export function HistoryPage({
                   <tr key={entry.id}>
                     <td>
                       <div className="history-reward">
-                        <RewardArt name={entry.reward_name} small />
+                        <RewardArt rewardId={entry.reward_id} small />
                         <strong>{entry.reward_name}</strong>
                       </div>
                     </td>

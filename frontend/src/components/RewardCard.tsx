@@ -13,7 +13,7 @@ export function RewardCard({
   const shortfall = reward.points_cost - balance
   return (
     <article className="reward-card">
-      <RewardArt name={reward.name} />
+      <RewardArt rewardId={reward.id} />
       <div className="reward-content">
         <div className="reward-title">
           <h3>{reward.name}</h3>

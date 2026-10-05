@@ -1,26 +1,26 @@
-function photoKind(name: string) {
-  const text = name.toLowerCase()
-  if (/coffee/.test(text)) return 'coffee'
-  if (/pastry|croissant/.test(text)) return 'pastry'
-  if (/sandwich/.test(text)) return 'sandwich'
-  if (/lunch|two/.test(text)) return 'lunch'
-  if (/20/.test(text)) return 'meal'
-  return /10/.test(text) ? 'drink' : 'generic'
-}
+import { useState } from 'react'
+
 export function RewardArt({
-  name,
+  rewardId,
   small = false,
 }: {
-  name: string
+  rewardId: number
   small?: boolean
 }) {
-  const kind = photoKind(name)
+  const [failedRewardId, setFailedRewardId] = useState<number | null>(null)
   return (
-    <div
-      aria-hidden="true"
-      className={`reward-art ${kind} ${small ? 'small' : ''}`}
-    >
-      {kind === 'generic' && <span>✧</span>}
+    <div aria-hidden="true" className={`reward-art ${small ? 'small' : ''}`}>
+      {failedRewardId === rewardId ? (
+        <span>✧</span>
+      ) : (
+        <img
+          src={`/reward_${rewardId}.png`}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailedRewardId(rewardId)}
+        />
+      )}
     </div>
   )
 }

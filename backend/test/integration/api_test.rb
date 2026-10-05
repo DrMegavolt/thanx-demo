@@ -19,10 +19,10 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_equal details, error["details"]
   end
 
-  test "all endpoints enforce identity before malformed bodies and media types" do
+  test "all endpoints require an existing demo identity" do
     [[:get, "/api/balance"], [:get, "/api/rewards"], [:get, "/api/redemptions"], [:post, "/api/redemptions"]].each do |method, path|
       [nil, "", " "].each do |value|
-        public_send(method, path, params: "{", headers: { "x-user" => value, "Content-Type" => "application/json" })
+        public_send(method, path, headers: { "x-user" => value })
         assert_error 400, "missing_user_header"
       end
       ["0", "01", "-1", "+1", "1.0", "1,2", "1 2", " 1", "1 ", "abc", "1\n", "１"].each do |value|
@@ -30,7 +30,7 @@ class ApiTest < ActionDispatch::IntegrationTest
         assert_error 400, "invalid_user_header"
       end
       ["999999", "9" * 100].each do |value|
-        public_send(method, path, params: "{", headers: { "x-user" => value, "Content-Type" => "application/json" })
+        public_send(method, path, headers: { "x-user" => value })
         assert_error 404, "user_not_found"
       end
     end
@@ -61,37 +61,49 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body
   end
 
-  test "POST rejects unsupported content types before parsing JSON" do
+  test "POST rejects unsupported content types" do
     [nil, "text/plain", "application/x-www-form-urlencoded", "application/vnd.test+json"].each do |type|
-      post "/api/redemptions", params: "{", headers: { "x-user" => @user.id.to_s, "CONTENT_TYPE" => type }
+      post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: { "x-user" => @user.id.to_s, "CONTENT_TYPE" => type }
       assert_error 415, "unsupported_media_type"
     end
   end
 
-  test "POST rejects empty and malformed JSON" do
-    ["", " ", "{", '{"reward_id":}', '{"reward_id": NaN}'].each do |body|
+  test "POST rejects malformed JSON using the API error envelope" do
+    [" ", "{", '{"reward_id":}', '{"reward_id": NaN}'].each do |body|
       post "/api/redemptions", params: body, headers: @headers
       assert_error 400, "invalid_json"
     end
+    assert_equal 500, @user.reload.points_balance
+    assert_equal 0, Redemption.count
   end
 
-  test "POST requires an object and exactly one positive JSON integer field" do
-    ["[]", "[1]", "null", "true", "1", '"one"'].each do |body|
+  test "POST looks up reward IDs rather than validating positivity or body shape" do
+    ["", "{}", "[]", "null", '{"reward_id": null}', '{"reward_id": 0}',
+      '{"reward_id": -1}', '{"reward_id": "missing"}', '{"reward_id": []}',
+      '{"reward_id": {"id": 1}}'].each do |body|
       post "/api/redemptions", params: body, headers: @headers
-      assert_error 422, "invalid_request", { "fields" => { "body" => ["must be a JSON object"] } }
-    end
-    [nil, "1", 0, -1, 1.5, 1.0, true, false].each do |value|
-      post "/api/redemptions", params: { reward_id: value }.to_json, headers: @headers
-      assert_error 422, "invalid_request", { "fields" => { "reward_id" => ["must be a positive integer"] } }
-    end
-    post "/api/redemptions", params: "{}", headers: @headers
-    assert_error 422, "invalid_request", { "fields" => { "reward_id" => ["must be a positive integer"] } }
-    %w[user_id points_balance points_cost reward_name points_spent].each do |field|
-      post "/api/redemptions", params: { reward_id: @reward.id, field => 1 }.to_json, headers: @headers
-      assert_error 422, "invalid_request", { "fields" => { field => ["is not allowed"] } }
+      assert_error 404, "reward_not_found"
     end
     assert_equal 500, @user.reload.points_balance
     assert_equal 0, Redemption.count
+  end
+
+  test "POST ignores extra fields and numeric string IDs replay the same redemption" do
+    post "/api/redemptions", params: {
+      reward_id: @reward.id.to_s, user_id: @other_user.id, points_balance: 99999,
+      points_cost: 1, reward_name: "Forged", points_spent: 1
+    }.to_json, headers: @headers
+    assert_response :created
+    original = response.parsed_body
+    assert_equal @reward.id, original.dig("redemption", "reward_id")
+    assert_equal "Coffee", original.dig("redemption", "reward_name")
+    assert_equal 250, original.dig("redemption", "points_spent")
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers
+    assert_response :created
+    assert_equal original, response.parsed_body
+    assert_equal 250, @user.reload.points_balance
+    assert_equal 100, @other_user.reload.points_balance
+    assert_equal 1, Redemption.count
   end
 
   test "POST uses database state and returns precise errors without mutation" do
@@ -193,19 +205,19 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body
   end
 
-  test "route and method errors precede identity and JSON validation" do
+  test "unknown routes and unsupported methods return API errors" do
     ["/api", "/api/nope", "/api/users/1/balance", "/api/users/1/redemptions"].each do |path|
-      post path, params: "{", headers: { "Content-Type" => "application/json" }
+      post path, headers: { "Content-Type" => "application/json" }
       assert_error 404, "endpoint_not_found"
     end
     { "/api/balance" => "GET, HEAD", "/api/rewards" => "GET, HEAD", "/api/redemptions" => "GET, HEAD, POST" }.each do |path, allow|
       %i[put patch delete options].each do |method|
-        public_send(method, path, params: "{", headers: { "Content-Type" => "application/json" })
+        public_send(method, path, headers: { "Content-Type" => "application/json" })
         assert_error 405, "method_not_allowed"
         assert_equal allow, response.headers["Allow"]
       end
     end
-    post "/api/rewards", params: "{", headers: @headers
+    post "/api/rewards", headers: @headers
     assert_error 405, "method_not_allowed"
   end
 
@@ -228,7 +240,7 @@ class ApiTest < ActionDispatch::IntegrationTest
     assert_equal 0, Redemption.count
   end
 
-  test "exhausted database retries map to sanitized 503" do
+  test "database contention maps to sanitized 503" do
     error = Api::Error.new("service_unavailable", "Database is busy.", status: 503)
     RedeemReward.stub(:call, ->(**) { raise error }) do
       post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers

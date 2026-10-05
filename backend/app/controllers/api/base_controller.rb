@@ -4,6 +4,7 @@ module Api
 
     rescue_from StandardError, with: :internal_error
     rescue_from Api::Error, with: :render_api_error
+    rescue_from ActionDispatch::Http::Parameters::ParseError, with: :invalid_json
 
     private
 
@@ -27,8 +28,15 @@ module Api
       render json: { error: { code: error.code, message: error.message, details: error.details } }, status: error.status
     end
 
+    def invalid_json(_error)
+      render_api_error(Api::Error.new("invalid_json", "The body must contain valid JSON.", status: 400))
+    end
+
     def internal_error(error)
-      Rails.logger.error("API failure: #{error.class}")
+      Rails.logger.error do
+        details = Rails.env.development? ? error.full_message(highlight: false) : error.class.to_s
+        "API failure: #{details}"
+      end
       render_api_error(Api::Error.new("internal_error", "An unexpected server error occurred.", status: 500))
     end
   end

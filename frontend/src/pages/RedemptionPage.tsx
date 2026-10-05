@@ -65,7 +65,7 @@ export function RedemptionPage({
       ) : reward ? (
         <div className="confirmation-grid">
           <section className="feature-reward">
-            <RewardArt name={reward.name} />
+            <RewardArt rewardId={reward.id} />
             <div>
               <h2>{reward.name}</h2>
               <p>{reward.description || 'A little something good, on us.'}</p>

@@ -49,6 +49,8 @@ Redemption POST requires a frontend-generated UUID v4 in `Idempotency-Key`. A un
 
 ## Frontend behavior
 
+`App.tsx` composes the interface and hash navigation. `hooks/useRewardsData.ts` owns API reads, demo identity, refreshes, and request cancellation. `hooks/useRedemption.ts` uses a reducer for saved attempts, pending requests, errors, and success. `components/IdentityMenu.tsx` owns the identity form; `pages/` contains Overview, Rewards, Redemption, and History, with shared reward cards and artwork in `components/`.
+
 Navigate between Overview, Rewards, and History, or open a confirmation directly at `/#/rewards/<reward_id>`. The frontend sends `Accept: application/json` and `x-user` on all API requests; redemption sends only `{ "reward_id": <id> }` with JSON content type and an `Idempotency-Key` header. It starts with demo user ID `1`, or restores the saved attempt’s user after a refresh. Open the user menu to select another existing ID. This is a demo identity selector, not authentication or authorization; any caller can select any existing user.
 
 Balance, rewards, and history come from the API. Confirmation shows the server balance and cost, prevents repeated submissions while pending, and displays success only after POST succeeds. Successful redemption refreshes all three reads. Before POST, the frontend persists `{ userId, rewardId, key }` in tab-scoped `sessionStorage`. Refreshes and navigation preserve unresolved attempts. After a network failure, malformed response, or 5xx, “Retry saved redemption” sends the original identity, reward, and UUID, even if the current catalog or balance no longer permits a new purchase. Reads never clear an unresolved key. A confirmed success or definitive validation/domain rejection clears it; the next user-confirmed purchase gets a new UUID. New purchases and identity changes are blocked while unresolved, and POST is never automatically retried. Insufficient points, unavailable rewards, loading, fetch failures with retry, and empty collections have explicit UI states. Historical reward names and costs use the stored snapshots, and timestamps display in the browser's local timezone.
@@ -59,15 +61,19 @@ Frontend verification on October 4, 2026: `npm run build` passes. A headless Chr
 
 ## Checks
 
+Prettier formats frontend TypeScript, JSX, CSS, and configuration files. Run `npm run format` to apply formatting or `npm run format:check` to verify it; the frontend CI workflow also checks formatting. Its exact version is pinned in the workspace manifest and root lockfile.
+
 ```sh
 # Repository root
 npm ci
+npm run format:check
 npm run lint
 npm run typecheck
 npm test
 npm run test:coverage
 npm run build
 # Optional: npm run test:watch
+# Format frontend code and styles: npm run format
 
 # backend/
 bundle install

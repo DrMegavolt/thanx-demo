@@ -1,14 +1,43 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Balance, Redemption, Reward } from './api'
 import { ATTEMPT_STORAGE_KEY, loadAttempt } from './redemptionAttempt'
 
-const coffee: Reward = { id: 1, name: 'Free coffee', description: 'Any regular coffee.', points_cost: 250 }
-const lunch: Reward = { id: 2, name: 'Lunch for two', description: null, points_cost: 1500 }
-const oldRedemption: Redemption = { id: 10, reward_id: 1, reward_name: 'Original coffee name', points_spent: 200, created_at: '2026-10-01T12:00:00Z' }
-const newRedemption: Redemption = { id: 11, reward_id: 1, reward_name: 'Free coffee', points_spent: 250, created_at: '2026-10-04T12:00:00Z' }
+const coffee: Reward = {
+  id: 1,
+  name: 'Free coffee',
+  description: 'Any regular coffee.',
+  points_cost: 250,
+}
+const lunch: Reward = {
+  id: 2,
+  name: 'Lunch for two',
+  description: null,
+  points_cost: 1500,
+}
+const oldRedemption: Redemption = {
+  id: 10,
+  reward_id: 1,
+  reward_name: 'Original coffee name',
+  points_spent: 200,
+  created_at: '2026-10-01T12:00:00Z',
+}
+const newRedemption: Redemption = {
+  id: 11,
+  reward_id: 1,
+  reward_name: 'Free coffee',
+  points_spent: 250,
+  created_at: '2026-10-04T12:00:00Z',
+}
 const fetchMock = vi.fn<typeof fetch>()
 let balance: Balance
 let rewards: Reward[]
@@ -18,18 +47,25 @@ let post: () => Promise<Response>
 function deferred<T>() {
   let resolve!: (value: T) => void
   let reject!: (error: unknown) => void
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
   return { promise, resolve, reject }
 }
 
 function posts() {
-  return fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')
+  return fetchMock.mock.calls.filter(
+    ([, options]) => options?.method === 'POST',
+  )
 }
 
 async function ready(route = '/overview') {
   window.history.replaceState(null, '', `/#${route}`)
   const view = render(<App />)
-  await waitFor(() => expect(screen.queryByText('Loading your rewards…')).not.toBeInTheDocument())
+  await waitFor(() =>
+    expect(screen.queryByText('Loading your rewards…')).not.toBeInTheDocument(),
+  )
   return view
 }
 
@@ -40,7 +76,10 @@ beforeEach(() => {
   post = async () => {
     balance = { ...balance, points_balance: 750 }
     history = [newRedemption, ...history]
-    return Response.json({ redemption: newRedemption, points_balance: 750 }, { status: 201 })
+    return Response.json(
+      { redemption: newRedemption, points_balance: 750 },
+      { status: 201 },
+    )
   }
   fetchMock.mockReset()
   fetchMock.mockImplementation(async (url, options) => {
@@ -57,14 +96,25 @@ describe('rewards screens', () => {
   it('loads the balance and latest historical snapshot, showing only affordable rewards on overview', async () => {
     await ready()
 
-    expect(screen.getByRole('heading', { name: 'A little thank you, on us.' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'A little thank you, on us.' }),
+    ).toBeInTheDocument()
     expect(screen.getByText((1000).toLocaleString())).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Original coffee name' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: coffee.name })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: lunch.name })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Original coffee name' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: coffee.name }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: lunch.name }),
+    ).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(3)
     for (const [, options] of fetchMock.mock.calls) {
-      expect(Object.fromEntries(new Headers(options?.headers))).toEqual({ accept: 'application/json', 'x-user': '1' })
+      expect(Object.fromEntries(new Headers(options?.headers))).toEqual({
+        accept: 'application/json',
+        'x-user': '1',
+      })
     }
   })
 
@@ -72,12 +122,20 @@ describe('rewards screens', () => {
     const user = userEvent.setup()
     await ready()
     await user.click(screen.getByRole('link', { name: 'Rewards' }))
-    expect(await screen.findByRole('heading', { name: 'Find your next treat.' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Need 500 more points' })).toBeDisabled()
+    expect(
+      await screen.findByRole('heading', { name: 'Find your next treat.' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Need 500 more points' }),
+    ).toBeDisabled()
     await user.click(screen.getByRole('link', { name: 'Redeem' }))
-    expect(await screen.findByRole('heading', { name: 'Confirm redemption' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Confirm redemption' }),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Cancel' }))
-    expect(await screen.findByRole('heading', { name: 'Find your next treat.' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Find your next treat.' }),
+    ).toBeInTheDocument()
     expect(posts()).toHaveLength(0)
   })
 
@@ -86,15 +144,24 @@ describe('rewards screens', () => {
     const row = screen.getByRole('row', { name: /Original coffee name/ })
     expect(within(row).getByText('200')).toBeInTheDocument()
     expect(within(row).queryByText(coffee.name)).not.toBeInTheDocument()
-    expect(row.querySelector('time')).toHaveAttribute('datetime', oldRedemption.created_at)
-    expect(screen.getByText(/Showing all 1 redemption · newest first/)).toBeInTheDocument()
+    expect(row.querySelector('time')).toHaveAttribute(
+      'datetime',
+      oldRedemption.created_at,
+    )
+    expect(
+      screen.getByText(/Showing all 1 redemption · newest first/),
+    ).toBeInTheDocument()
   })
 
   it('blocks unaffordable direct links without making a POST', async () => {
     const user = userEvent.setup()
     await ready('/rewards/2')
-    expect(screen.getByText('You need 500 more points for this reward.')).toBeInTheDocument()
-    const confirm = screen.getByRole('button', { name: `Confirm · ${(1500).toLocaleString()} points` })
+    expect(
+      screen.getByText('You need 500 more points for this reward.'),
+    ).toBeInTheDocument()
+    const confirm = screen.getByRole('button', {
+      name: `Confirm · ${(1500).toLocaleString()} points`,
+    })
     expect(confirm).toBeDisabled()
     await user.click(confirm)
     expect(posts()).toHaveLength(0)
@@ -102,18 +169,25 @@ describe('rewards screens', () => {
 
   it('handles a missing or inactive reward direct link', async () => {
     await ready('/rewards/999')
-    expect(screen.getByRole('heading', { name: 'Reward unavailable.' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Confirm/ })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Reward unavailable.' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Confirm/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows empty overview, catalog, and history states', async () => {
-    rewards = []; history = []
+    rewards = []
+    history = []
     const user = userEvent.setup()
     await ready()
     expect(screen.getByText(/Your first treat is waiting/)).toBeInTheDocument()
     expect(screen.getByText(/New rewards will appear here/)).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Rewards' }))
-    expect(await screen.findByText(/No rewards are available right now/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/No rewards are available right now/),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'History' }))
     expect(await screen.findByText(/No redemptions yet/)).toBeInTheDocument()
   })
@@ -122,7 +196,9 @@ describe('rewards screens', () => {
     balance.points_balance = 0
     await ready()
     expect(screen.getByText(/Keep collecting points/)).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /View reward/ })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: /View reward/ }),
+    ).not.toBeInTheDocument()
   })
 })
 
@@ -132,12 +208,22 @@ describe('loading and demo identity', () => {
     const response = deferred<Response>()
     fetchMock.mockImplementationOnce(() => response.promise)
     render(<App />)
-    expect(screen.getByRole('status')).toHaveTextContent('Loading your rewards…')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Loading your rewards…',
+    )
     await act(async () => response.reject(new TypeError('Offline')))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to connect. Check that Rails is running and try again.')
-    expect(screen.getByRole('heading', { name: 'Your rewards are a moment away.' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unable to connect. Check that Rails is running and try again.',
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Your rewards are a moment away.' }),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await screen.findByRole('heading', { name: 'A little thank you, on us.' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        name: 'A little thank you, on us.',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('switches demo identities and ignores stale responses for the previous user', async () => {
@@ -155,8 +241,18 @@ describe('loading and demo identity', () => {
     await user.click(screen.getByRole('button', { name: 'Select user' }))
     expect(await screen.findByText('Ruby Jones')).toBeInTheDocument()
     expect(oldSignal?.aborted).toBe(true)
-    expect(fetchMock.mock.calls.slice(-3).every(([, options]) => new Headers(options?.headers).get('x-user') === '2')).toBe(true)
-    await act(async () => staleBalance.resolve(Response.json({ user_id: 1, name: 'Stale Alex', points_balance: 9999 })))
+    expect(
+      fetchMock.mock.calls
+        .slice(-3)
+        .every(
+          ([, options]) => new Headers(options?.headers).get('x-user') === '2',
+        ),
+    ).toBe(true)
+    await act(async () =>
+      staleBalance.resolve(
+        Response.json({ user_id: 1, name: 'Stale Alex', points_balance: 9999 }),
+      ),
+    )
     expect(screen.queryByText('Stale Alex')).not.toBeInTheDocument()
     expect(screen.getByText('Ruby Jones')).toBeInTheDocument()
     expect(screen.getByText(/Your first treat is waiting/)).toBeInTheDocument()
@@ -168,7 +264,7 @@ describe('loading and demo identity', () => {
     const signals = fetchMock.mock.calls.map(([, options]) => options?.signal)
     unmount()
     expect(signals).toHaveLength(3)
-    expect(signals.every(signal => signal?.aborted)).toBe(true)
+    expect(signals.every((signal) => signal?.aborted)).toBe(true)
   })
 })
 
@@ -180,7 +276,10 @@ describe('redemption', () => {
     await ready('/rewards/1')
     const confirm = screen.getByRole('button', { name: 'Confirm · 250 points' })
     // Two synchronous clicks also exercise the ref guard before React rerenders.
-    act(() => { fireEvent.click(confirm); fireEvent.click(confirm) })
+    act(() => {
+      fireEvent.click(confirm)
+      fireEvent.click(confirm)
+    })
     expect(posts()).toHaveLength(1)
     const [url, options] = posts()[0]
     expect(url).toBe('/api/redemptions')
@@ -190,16 +289,34 @@ describe('redemption', () => {
     expect(headers.get('x-user')).toBe('1')
     expect(headers.get('content-type')).toBe('application/json')
     expect(screen.getByRole('button', { name: 'Redeeming…' })).toBeDisabled()
-    expect(loadAttempt()).toEqual({ userId: '1', rewardId: 1, key: new Headers(posts()[0][1]?.headers).get('Idempotency-Key') })
+    expect(loadAttempt()).toEqual({
+      userId: '1',
+      rewardId: 1,
+      key: new Headers(posts()[0][1]?.headers).get('Idempotency-Key'),
+    })
     expect(screen.queryByText('Free coffee is yours!')).not.toBeInTheDocument()
     await user.click(screen.getByText('Alex Morgan'))
     expect(screen.getByLabelText('User ID')).toBeDisabled()
-    balance.points_balance = 750; history = [newRedemption, oldRedemption]
-    await act(async () => response.resolve(Response.json({ redemption: newRedemption, points_balance: 750 }, { status: 201 })))
+    balance.points_balance = 750
+    history = [newRedemption, oldRedemption]
+    await act(async () =>
+      response.resolve(
+        Response.json(
+          { redemption: newRedemption, points_balance: 750 },
+          { status: 201 },
+        ),
+      ),
+    )
     expect(await screen.findByText('Free coffee is yours!')).toBeInTheDocument()
-    expect(screen.getByText('250 points redeemed. Balance after this redemption: 750 points.')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '250 points redeemed. Balance after this redemption: 750 points.',
+      ),
+    ).toBeInTheDocument()
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7))
-    await user.click(screen.getByRole('link', { name: 'View redemption history →' }))
+    await user.click(
+      screen.getByRole('link', { name: 'View redemption history →' }),
+    )
     expect(await screen.findByRole('table')).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.getAllByRole('row')[1]).toHaveTextContent('Free coffee')
@@ -211,14 +328,30 @@ describe('redemption', () => {
     const user = userEvent.setup()
     post = async () => {
       balance.points_balance = 100
-      return Response.json({ error: { code: 'insufficient_points', message: 'You do not have enough points to redeem this reward.' } }, { status: 422 })
+      return Response.json(
+        {
+          error: {
+            code: 'insufficient_points',
+            message: 'You do not have enough points to redeem this reward.',
+          },
+        },
+        { status: 422 },
+      )
     }
     await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have enough points')
-    expect(await screen.findByText('You need 150 more points for this reward.')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'You do not have enough points',
+    )
+    expect(
+      await screen.findByText('You need 150 more points for this reward.'),
+    ).toBeInTheDocument()
     expect(loadAttempt()).toBeNull()
-    expect(screen.getByRole('button', { name: 'Confirm · 250 points' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    ).toBeDisabled()
     expect(posts()).toHaveLength(1)
   })
 
@@ -226,55 +359,112 @@ describe('redemption', () => {
     const user = userEvent.setup()
     post = async () => {
       rewards = []
-      return Response.json({ error: { code: 'reward_inactive', message: 'This reward is inactive.' } }, { status: 422 })
+      return Response.json(
+        {
+          error: {
+            code: 'reward_inactive',
+            message: 'This reward is inactive.',
+          },
+        },
+        { status: 422 },
+      )
     }
     await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
-    expect(await screen.findByRole('heading', { name: 'Reward unavailable.' })).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'Reward unavailable.' }),
+    ).toBeInTheDocument()
     expect(posts()).toHaveLength(1)
   })
 
-  it.each(['network', 'server', 'unreadable', 'malformed'] as const)('preserves the key across refresh after an ambiguous %s failure', async failure => {
-    const user = userEvent.setup()
-    post = async () => {
-      balance.points_balance = 0; history = [newRedemption, oldRedemption]
-      if (failure === 'network') throw new TypeError('Connection lost')
-      if (failure === 'unreadable') return new Response('invalid JSON', { status: 201 })
-      if (failure === 'malformed') return Response.json({}, { status: 201 })
-      return Response.json({ error: { code: 'internal_error', message: 'Internal error.' } }, { status: 500 })
-    }
-    const view = await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t confirm your redemption.')
-    const saved = loadAttempt()
-    expect(saved).toMatchObject({ userId: '1', rewardId: 1, key: expect.any(String) })
-    const key = new Headers(posts()[0][1]?.headers).get('Idempotency-Key')
-    expect(saved?.key).toBe(key)
-    // A read refresh cannot establish which request created a history entry.
-    await user.click(screen.getByRole('button', { name: 'Refresh balance and history' }))
-    await waitFor(() => expect(screen.queryByText('Refreshing your rewards…')).not.toBeInTheDocument())
-    expect(loadAttempt()).toEqual(saved)
-    view.unmount()
-    rewards = [] // Retry must work even when the catalog no longer contains it.
-    await ready('/overview')
-    expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
-    post = async () => Response.json({ redemption: newRedemption, points_balance: 750 }, { status: 201 })
-    await user.click(screen.getByRole('button', { name: 'Retry saved redemption' }))
-    expect(await screen.findByText('Free coffee is yours!')).toBeInTheDocument()
-    expect(posts()).toHaveLength(2)
-    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(key)
-    expect(posts()[1][1]?.body).toBe(posts()[0][1]?.body)
-    expect(sessionStorage.getItem(ATTEMPT_STORAGE_KEY)).toBeNull()
-  })
+  it.each(['network', 'server', 'unreadable', 'malformed'] as const)(
+    'preserves the key across refresh after an ambiguous %s failure',
+    async (failure) => {
+      const user = userEvent.setup()
+      post = async () => {
+        balance.points_balance = 0
+        history = [newRedemption, oldRedemption]
+        if (failure === 'network') throw new TypeError('Connection lost')
+        if (failure === 'unreadable')
+          return new Response('invalid JSON', { status: 201 })
+        if (failure === 'malformed') return Response.json({}, { status: 201 })
+        return Response.json(
+          { error: { code: 'internal_error', message: 'Internal error.' } },
+          { status: 500 },
+        )
+      }
+      const view = await ready('/rewards/1')
+      await user.click(
+        screen.getByRole('button', { name: 'Confirm · 250 points' }),
+      )
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'We couldn’t confirm your redemption.',
+      )
+      const saved = loadAttempt()
+      expect(saved).toMatchObject({
+        userId: '1',
+        rewardId: 1,
+        key: expect.any(String),
+      })
+      const key = new Headers(posts()[0][1]?.headers).get('Idempotency-Key')
+      expect(saved?.key).toBe(key)
+      // A read refresh cannot establish which request created a history entry.
+      await user.click(
+        screen.getByRole('button', { name: 'Refresh balance and history' }),
+      )
+      await waitFor(() =>
+        expect(
+          screen.queryByText('Refreshing your rewards…'),
+        ).not.toBeInTheDocument(),
+      )
+      expect(loadAttempt()).toEqual(saved)
+      view.unmount()
+      rewards = [] // Retry must work even when the catalog no longer contains it.
+      await ready('/overview')
+      expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+      post = async () =>
+        Response.json(
+          { redemption: newRedemption, points_balance: 750 },
+          { status: 201 },
+        )
+      await user.click(
+        screen.getByRole('button', { name: 'Retry saved redemption' }),
+      )
+      expect(
+        await screen.findByText('Free coffee is yours!'),
+      ).toBeInTheDocument()
+      expect(posts()).toHaveLength(2)
+      expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(
+        key,
+      )
+      expect(posts()[1][1]?.body).toBe(posts()[0][1]?.body)
+      expect(sessionStorage.getItem(ATTEMPT_STORAGE_KEY)).toBeNull()
+    },
+  )
 
   it('retries a busy response with the same key', async () => {
     const user = userEvent.setup()
-    post = async () => Response.json({ error: { code: 'service_unavailable', message: 'The database is busy.' } }, { status: 503 })
+    post = async () =>
+      Response.json(
+        {
+          error: {
+            code: 'service_unavailable',
+            message: 'The database is busy.',
+          },
+        },
+        { status: 503 },
+      )
     await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
     await screen.findByRole('alert')
     const key = loadAttempt()?.key
-    await user.click(screen.getByRole('button', { name: 'Retry saved redemption' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Retry saved redemption' }),
+    )
     await waitFor(() => expect(posts()).toHaveLength(2))
     expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(key)
     expect(loadAttempt()?.key).toBe(key)
@@ -284,60 +474,234 @@ describe('redemption', () => {
     const user = userEvent.setup()
     post = () => new Promise<Response>(() => {})
     const firstPage = await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
     expect(screen.getByRole('button', { name: 'Redeeming…' })).toBeDisabled()
     const original = loadAttempt()
     firstPage.unmount()
-    post = async () => Response.json({ redemption: newRedemption, points_balance: 750 }, { status: 201 })
+    post = async () =>
+      Response.json(
+        { redemption: newRedemption, points_balance: 750 },
+        { status: 201 },
+      )
     await ready('/overview')
     expect(loadAttempt()).toEqual(original)
-    await user.click(screen.getByRole('button', { name: 'Retry saved redemption' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Retry saved redemption' }),
+    )
     expect(await screen.findByText('Free coffee is yours!')).toBeInTheDocument()
     expect(posts()).toHaveLength(2)
-    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(original?.key)
+    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(
+      original?.key,
+    )
     expect(loadAttempt()).toBeNull()
   })
 
   it('keeps a conflicting key and blocks starting a replacement purchase', async () => {
     const user = userEvent.setup()
-    post = async () => Response.json({ error: { code: 'idempotency_conflict', message: 'Already used.' } }, { status: 409 })
+    post = async () =>
+      Response.json(
+        { error: { code: 'idempotency_conflict', message: 'Already used.' } },
+        { status: 409 },
+      )
     await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Its key cannot safely be replaced.')
-    expect(loadAttempt()?.key).toBe(new Headers(posts()[0][1]?.headers).get('Idempotency-Key'))
-    expect(screen.getByRole('button', { name: 'Confirm · 250 points' })).toBeDisabled()
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Its key cannot safely be replaced.',
+    )
+    expect(loadAttempt()?.key).toBe(
+      new Headers(posts()[0][1]?.headers).get('Idempotency-Key'),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    ).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
   })
 
   it('uses a new key for a genuinely new redemption', async () => {
     const user = userEvent.setup()
     await ready('/rewards/1')
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
     await screen.findByText('Free coffee is yours!')
     const firstKey = new Headers(posts()[0][1]?.headers).get('Idempotency-Key')
     await user.click(screen.getByRole('link', { name: '← Back to rewards' }))
     await user.click(await screen.findByRole('link', { name: 'Redeem' }))
-    await user.click(await screen.findByRole('button', { name: 'Confirm · 250 points' }))
+    await user.click(
+      await screen.findByRole('button', { name: 'Confirm · 250 points' }),
+    )
     await waitFor(() => expect(posts()).toHaveLength(2))
-    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).not.toBe(firstKey)
+    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).not.toBe(
+      firstKey,
+    )
   })
 
   it('restores the original identity with the saved attempt after reload', async () => {
     const user = userEvent.setup()
-    sessionStorage.setItem(ATTEMPT_STORAGE_KEY, JSON.stringify({ userId: '2', rewardId: 1, key: crypto.randomUUID() }))
+    sessionStorage.setItem(
+      ATTEMPT_STORAGE_KEY,
+      JSON.stringify({ userId: '2', rewardId: 1, key: crypto.randomUUID() }),
+    )
     await ready('/overview')
-    expect(fetchMock.mock.calls.every(([, options]) => new Headers(options?.headers).get('x-user') === '2')).toBe(true)
-    await user.click(screen.getByRole('button', { name: 'Retry saved redemption' }))
+    expect(
+      fetchMock.mock.calls.every(
+        ([, options]) => new Headers(options?.headers).get('x-user') === '2',
+      ),
+    ).toBe(true)
+    await user.click(
+      screen.getByRole('button', { name: 'Retry saved redemption' }),
+    )
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(new Headers(posts()[0][1]?.headers).get('x-user')).toBe('2')
+  })
+
+  it('blocks new purchases and identity changes when saved storage is unreadable', async () => {
+    sessionStorage.setItem(ATTEMPT_STORAGE_KEY, 'invalid JSON')
+    await ready('/rewards/1')
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Unable to read the saved redemption.',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+    expect(posts()).toHaveLength(0)
+  })
+
+  it.each(['1', '2'])(
+    'restores a saved attempt for user %s discovered at confirmation instead of starting another purchase',
+    async (savedUserId) => {
+      const user = userEvent.setup()
+      await ready('/rewards/1')
+      const saved = {
+        userId: savedUserId,
+        rewardId: 2,
+        key: crypto.randomUUID(),
+      }
+      sessionStorage.setItem(ATTEMPT_STORAGE_KEY, JSON.stringify(saved))
+      const userName = savedUserId === '1' ? 'Alex Morgan' : 'Ruby Jones'
+      balance = {
+        user_id: Number(savedUserId),
+        name: userName,
+        points_balance: 50,
+      }
+
+      await user.click(
+        screen.getByRole('button', { name: 'Confirm · 250 points' }),
+      )
+
+      expect(await screen.findByText(userName)).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Confirm redemption' }),
+      ).toBeInTheDocument()
+      expect(loadAttempt()).toEqual(saved)
+      expect(posts()).toHaveLength(0)
+      expect(screen.getByLabelText('User ID')).toHaveValue(savedUserId)
+      expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+      expect(
+        fetchMock.mock.calls
+          .slice(-3)
+          .every(
+            ([, options]) =>
+              new Headers(options?.headers).get('x-user') === savedUserId,
+          ),
+      ).toBe(true)
+
+      const lunchRedemption = {
+        ...newRedemption,
+        reward_id: 2,
+        reward_name: lunch.name,
+        points_spent: lunch.points_cost,
+      }
+      post = async () =>
+        Response.json(
+          { redemption: lunchRedemption, points_balance: 50 },
+          { status: 201 },
+        )
+      await user.click(
+        screen.getByRole('button', { name: 'Retry saved redemption' }),
+      )
+      expect(
+        await screen.findByText('Lunch for two is yours!'),
+      ).toBeInTheDocument()
+      expect(posts()).toHaveLength(1)
+      expect(posts()[0][1]?.body).toBe('{"reward_id":2}')
+      expect(new Headers(posts()[0][1]?.headers).get('Idempotency-Key')).toBe(
+        saved.key,
+      )
+      expect(new Headers(posts()[0][1]?.headers).get('x-user')).toBe(
+        savedUserId,
+      )
+    },
+  )
+
+  it('keeps a rejected request locked when storage cannot be cleared and safely retries it', async () => {
+    const user = userEvent.setup()
+    await ready('/rewards/1')
+    post = async () =>
+      Response.json(
+        {
+          error: { code: 'insufficient_points', message: 'Not enough points.' },
+        },
+        { status: 422 },
+      )
+    const removeItem = vi
+      .spyOn(Storage.prototype, 'removeItem')
+      .mockImplementation(() => {
+        throw new DOMException('Storage unavailable')
+      })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    expect(
+      await screen.findByText(/Unable to clear the saved redemption/),
+    ).toBeInTheDocument()
+    const saved = loadAttempt()
+    expect(saved).not.toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Select user' })).toBeDisabled()
+
+    removeItem.mockRestore()
+    post = async () =>
+      Response.json(
+        { redemption: newRedemption, points_balance: 750 },
+        { status: 201 },
+      )
+    await user.click(
+      screen.getByRole('button', { name: 'Retry saved redemption' }),
+    )
+    expect(await screen.findByText('Free coffee is yours!')).toBeInTheDocument()
+    expect(posts()).toHaveLength(2)
+    expect(new Headers(posts()[1][1]?.headers).get('Idempotency-Key')).toBe(
+      saved?.key,
+    )
+    expect(loadAttempt()).toBeNull()
+    expect(screen.getByRole('button', { name: 'Select user' })).toBeEnabled()
+    expect(
+      screen.queryByText(/Unable to clear the saved redemption/),
+    ).not.toBeInTheDocument()
   })
 
   it('does not send a POST when the attempt cannot be persisted', async () => {
     const user = userEvent.setup()
     await ready('/rewards/1')
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota exceeded') })
-    await user.click(screen.getByRole('button', { name: 'Confirm · 250 points' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save your redemption request.')
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded')
+    })
+    await user.click(
+      screen.getByRole('button', { name: 'Confirm · 250 points' }),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unable to save your redemption request.',
+    )
     expect(posts()).toHaveLength(0)
   })
 })

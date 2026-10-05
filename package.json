@@ -11,7 +11,9 @@
     "lint": "npm run lint --workspace frontend",
     "test": "npm run test --workspace frontend",
     "test:watch": "npm run test:watch --workspace frontend",
-    "test:coverage": "npm run test:coverage --workspace frontend"
+    "test:coverage": "npm run test:coverage --workspace frontend",
+    "format": "npm run format --workspace frontend",
+    "format:check": "npm run format:check --workspace frontend"
   },
   "engines": {
     "node": ">=22.12.0"

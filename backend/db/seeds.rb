@@ -18,7 +18,7 @@ ApplicationRecord.transaction do
   unless User.exists?(id: 2)
     User.create!(id: 2, name: "Ruby Jones", points_balance: 2000)
     ["Free coffee", "$5 off your order"].each do |name|
-      RedeemReward.call(user_id: 2, reward_id: Reward.find_by!(name: name).id)
+      RedeemReward.call(user_id: 2, reward_id: Reward.find_by!(name: name).id, idempotency_key: SecureRandom.uuid)
     end
   end
 

@@ -27,6 +27,8 @@ jobs:
           ruby-version: "3.4.3"
           working-directory: backend
           bundler-cache: true
+      - name: Lint Ruby and Rails
+        run: bundle exec rubocop --parallel
       - name: Prepare SQLite database
         run: bin/rails db:prepare
       - name: Check autoloading

@@ -45,13 +45,13 @@ On a fresh database, the initial seed user is Alex Morgan with 1,250 points and 
 
 Redemption disables Rails' query cache and reads fresh user/reward state inside a Rails 8 SQLite `BEGIN IMMEDIATE` transaction. SQLite's database write lock coordinates other redemptions and reward edits across connections and processes. The debit and historical name/cost snapshots commit together. Busy/locked failures roll back and retry the complete transaction up to three attempts, with 25ms and 50ms backoff, then return 503 without a charge or history entry. Each attempt also uses the configured 5-second SQLite lock timeout. Other failures return a sanitized 500. Database constraints enforce integer, nonnegative balances and positive costs/spends, alongside model validations.
 
-POST is not idempotent: successful repeated requests charge again. After a network failure or ambiguous 500, refresh balance/history before deciding whether to resubmit.
+Redemption POST requires a frontend-generated UUID v4 in `Idempotency-Key`. A unique `(user_id, idempotency_key)` index and the locked transaction ensure duplicate/retried requests charge once. Replays return the original redemption and saved transaction balance; reusing a committed key for another reward returns 409. See the [API specification and flow diagram](docs/API_SPEC.md#idempotency-key-flow) for key scope, retention, errors, and recovery.
 
 ## Frontend behavior
 
-Navigate between Overview, Rewards, and History, or open a confirmation directly at `/#/rewards/<reward_id>`. The frontend sends `Accept: application/json` and `x-user` on all API requests; redemption sends only `{ "reward_id": <id> }` with JSON content type. It starts with demo user ID `1`. Open the user menu to select another existing ID. This is a demo identity selector, not authentication or authorization; any caller can select any existing user.
+Navigate between Overview, Rewards, and History, or open a confirmation directly at `/#/rewards/<reward_id>`. The frontend sends `Accept: application/json` and `x-user` on all API requests; redemption sends only `{ "reward_id": <id> }` with JSON content type and an `Idempotency-Key` header. It starts with demo user ID `1`, or restores the saved attempt’s user after a refresh. Open the user menu to select another existing ID. This is a demo identity selector, not authentication or authorization; any caller can select any existing user.
 
-Balance, rewards, and history come from the API. Confirmation shows the server balance and cost, prevents repeated submissions while pending, and displays success only after POST succeeds. Successful redemption refreshes all three reads. Network failures and ambiguous server errors block further redemption until the user refreshes and reviews balance and history; POST is never automatically retried. Insufficient points, unavailable rewards, loading, fetch failures with retry, and empty collections have explicit UI states. Historical reward names and costs use the stored snapshots, and timestamps display in the browser's local timezone.
+Balance, rewards, and history come from the API. Confirmation shows the server balance and cost, prevents repeated submissions while pending, and displays success only after POST succeeds. Successful redemption refreshes all three reads. Before POST, the frontend persists `{ userId, rewardId, key }` in tab-scoped `sessionStorage`. Refreshes and navigation preserve unresolved attempts. After a network failure, malformed response, or 5xx, “Retry saved redemption” sends the original identity, reward, and UUID, even if the current catalog or balance no longer permits a new purchase. Reads never clear an unresolved key. A confirmed success or definitive validation/domain rejection clears it; the next user-confirmed purchase gets a new UUID. New purchases and identity changes are blocked while unresolved, and POST is never automatically retried. Insufficient points, unavailable rewards, loading, fetch failures with retry, and empty collections have explicit UI states. Historical reward names and costs use the stored snapshots, and timestamps display in the browser's local timezone.
 
 Layouts follow `docs/mockups/`: ivory surfaces, plum actions, peach accents, and responsive cards. Illustrative photos reuse the supplied catalog mockup as a CSS image sheet in `frontend/public/rewards-reference.png`; reward names and descriptions still come from the API. Unknown reward types use a neutral illustration. No image service or additional frontend dependencies are required.
 
@@ -61,15 +61,27 @@ Frontend verification on October 4, 2026: `npm run build` passes. A headless Chr
 
 ```sh
 # Repository root
+npm ci
+npm run lint
 npm run typecheck
+npm test
+npm run test:coverage
 npm run build
+# Optional: npm run test:watch
 
 # backend/
-bin/rails db:migrate
-bin/rails zeitwerk:check
-bin/rails test
-COVERAGE=1 bin/rails test
+bundle install
+bundle exec rubocop
+RAILS_ENV=test bin/rails db:prepare
+RAILS_ENV=test bin/rails zeitwerk:check
+RAILS_ENV=test COVERAGE=1 bin/rails test
 ```
+
+Frontend tests use Vitest, React Testing Library, and jsdom. They exercise the real API client with mocked HTTP responses: navigation, balance, affordability, historical snapshots, demo identity changes, stale request cancellation, successful redemption, duplicate-submit prevention, API rejections, saved request persistence, and retrying ambiguous failures with the same idempotency key. They run without Rails or a browser installation; live browser/API verification remains a separate check.
+
+`npm run lint` uses Oxlint's correctness rules with TypeScript, React Hooks, accessibility, and Vitest checks. `npm run typecheck` checks application code, tests, and both Vite/Vitest configurations. Coverage includes frontend source except the bootstrap entry point, declarations, and test helpers. `npm run test:coverage` enforces 90% lines/statements/functions and 80% branches, writing HTML, LCOV, and JSON summary reports to ignored `frontend/coverage/`.
+
+Backend lint uses the Rails Omakase RuboCop preset, preserving the existing array spacing style and excluding generated schema and dependency files. Ruby has no configured static type checker; RuboCop checks Ruby syntax and Rails conventions, while `zeitwerk:check` verifies application autoloading.
 
 The frontend build is a static bundle. A production deployment must serve it and route `/api` to Rails; Vite's proxy is development-only. Rails production also requires `SECRET_KEY_BASE` and a writable SQLite database path (`DATABASE_PATH` can override it).
 
@@ -77,7 +89,12 @@ Backend verification on October 4, 2026 uses Ruby 3.4.3 and Rails 8.0.2: migrati
 
 `COVERAGE=1 bin/rails test` measures executable lines in `backend/app/` and the API body middleware using Ruby's built-in Coverage library. It writes ignored `backend/coverage/coverage.json` and fails below 95% or when an application file was not loaded. Run the full suite for coverage. Minitest is pinned to 5.25.4 for Rails 8 and its bundled mocking helpers.
 
-[`.github/workflows/backend.yml`](.github/workflows/backend.yml) runs on pushes, pull requests, and manual dispatch. It installs Ruby 3.4.3 with cached locked gems, prepares SQLite, checks autoloading, runs the complete test suite with the 95% coverage gate, and uploads the coverage JSON. The workflow has read-only repository permissions and needs no secrets or database service. See [GitHub Actions](https://github.com/DrMegavolt/thanx-demo/actions) for workflow runs and uploaded coverage reports.
+Both GitHub workflows run on pushes, pull requests, and manual dispatch, with read-only repository permissions and no secrets or database service:
+
+- [Frontend](.github/workflows/frontend.yml): installs Node from `.nvmrc` and dependencies with `npm ci`, then runs lint, type checking, tests with coverage gates, and the production build. Uploads frontend coverage reports.
+- [Backend](.github/workflows/backend.yml): installs Ruby 3.4.3 with cached locked gems, runs RuboCop, prepares SQLite, checks autoloading, and runs the complete test suite with the 95% coverage gate. Uploads backend coverage JSON.
+
+See [GitHub Actions](https://github.com/DrMegavolt/thanx-demo/actions) for workflow runs and uploaded reports. Both workflows retain coverage artifacts for 14 days, including reports produced by a failed coverage gate.
 
 ## Submission
 

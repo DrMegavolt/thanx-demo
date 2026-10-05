@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_04_000004) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_04_000005) do
   create_table "redemptions", force: :cascade do |t|
     t.integer "user_id", null: false
     t.integer "reward_id", null: false
@@ -18,9 +18,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_04_000004) do
     t.integer "points_spent", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "idempotency_key"
+    t.integer "points_balance_after"
     t.index ["reward_id"], name: "index_redemptions_on_reward_id"
     t.index ["user_id", "created_at"], name: "index_redemptions_on_user_id_and_created_at"
+    t.index ["user_id", "idempotency_key"], name: "index_redemptions_on_user_id_and_idempotency_key", unique: true
     t.index ["user_id"], name: "index_redemptions_on_user_id"
+    t.check_constraint "(idempotency_key IS NULL AND points_balance_after IS NULL) OR (idempotency_key IS NOT NULL AND points_balance_after IS NOT NULL AND typeof(points_balance_after) = 'integer' AND points_balance_after >= 0)", name: "redemptions_idempotency_result"
+    t.check_constraint "idempotency_key IS NULL OR (length(idempotency_key) = 36 AND substr(idempotency_key, 9, 1) = '-' AND substr(idempotency_key, 14, 1) = '-' AND substr(idempotency_key, 19, 1) = '-' AND substr(idempotency_key, 24, 1) = '-' AND length(replace(idempotency_key, '-', '')) = 32 AND replace(idempotency_key, '-', '') NOT GLOB '*[^0-9a-f]*' AND substr(idempotency_key, 15, 1) = '4' AND substr(idempotency_key, 20, 1) IN ('8', '9', 'a', 'b'))", name: "redemptions_uuid_key"
     t.check_constraint "points_spent > 0", name: "redemptions_positive_spend"
     t.check_constraint "typeof(points_spent) = 'integer'", name: "redemptions_integer_spend"
   end

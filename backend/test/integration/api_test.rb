@@ -5,7 +5,7 @@ class ApiTest < ActionDispatch::IntegrationTest
     @user = create_user(balance: 500)
     @other_user = create_user(balance: 100)
     @reward = create_reward
-    @headers = { "x-user" => @user.id.to_s, "Content-Type" => "application/json" }
+    @headers = { "x-user" => @user.id.to_s, "Content-Type" => "application/json", "Idempotency-Key" => SecureRandom.uuid }
   end
 
   def assert_error(status, code, details = {})
@@ -76,7 +76,7 @@ class ApiTest < ActionDispatch::IntegrationTest
   end
 
   test "POST requires an object and exactly one positive JSON integer field" do
-    ['[]', '[1]', 'null', 'true', '1', '"one"'].each do |body|
+    ["[]", "[1]", "null", "true", "1", '"one"'].each do |body|
       post "/api/redemptions", params: body, headers: @headers
       assert_error 422, "invalid_request", { "fields" => { "body" => ["must be a JSON object"] } }
     end
@@ -84,7 +84,7 @@ class ApiTest < ActionDispatch::IntegrationTest
       post "/api/redemptions", params: { reward_id: value }.to_json, headers: @headers
       assert_error 422, "invalid_request", { "fields" => { "reward_id" => ["must be a positive integer"] } }
     end
-    post "/api/redemptions", params: '{}', headers: @headers
+    post "/api/redemptions", params: "{}", headers: @headers
     assert_error 422, "invalid_request", { "fields" => { "reward_id" => ["must be a positive integer"] } }
     %w[user_id points_balance points_cost reward_name points_spent].each do |field|
       post "/api/redemptions", params: { reward_id: @reward.id, field => 1 }.to_json, headers: @headers
@@ -126,6 +126,58 @@ class ApiTest < ActionDispatch::IntegrationTest
     get "/api/redemptions", headers: @headers
     assert_equal [entry], response.parsed_body
     assert_equal 100, @other_user.reload.points_balance
+  end
+
+  test "POST requires a single UUID v4 key" do
+    [nil, "", " "].each do |key|
+      post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers.merge("Idempotency-Key" => key)
+      assert_error 400, "missing_idempotency_key"
+    end
+    ["not-a-uuid", SecureRandom.uuid + " ", "00000000-0000-1000-8000-000000000000", "a,b"].each do |key|
+      post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers.merge("Idempotency-Key" => key)
+      assert_error 400, "invalid_idempotency_key"
+    end
+    assert_equal 500, @user.reload.points_balance
+    assert_equal 0, Redemption.count
+  end
+
+  test "retry replays original success even after another charge and reward deactivation" do
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers
+    original = response.parsed_body
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json,
+      headers: @headers.merge("Idempotency-Key" => SecureRandom.uuid)
+    assert_response :created
+    @reward.update!(active: false, name: "Tea", points_cost: 900)
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json,
+      headers: @headers.merge("Idempotency-Key" => @headers["Idempotency-Key"].upcase)
+    assert_response :created
+    assert_equal original, response.parsed_body
+    assert_equal 0, @user.reload.points_balance
+    assert_equal 2, Redemption.count
+  end
+
+  test "key reuse with another reward conflicts but another user has an independent key scope" do
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers
+    other_reward = create_reward(cost: 50)
+    post "/api/redemptions", params: { reward_id: other_reward.id }.to_json, headers: @headers
+    assert_error 409, "idempotency_conflict"
+    assert_equal 250, @user.reload.points_balance
+    post "/api/redemptions", params: { reward_id: other_reward.id }.to_json,
+      headers: @headers.merge("x-user" => @other_user.id.to_s)
+    assert_response :created
+    assert_equal 50, @other_user.reload.points_balance
+    assert_equal 2, Redemption.count
+  end
+
+  test "failed redemption does not consume its key" do
+    @reward.update!(active: false)
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers
+    assert_error 422, "reward_inactive", { "reward_id" => @reward.id }
+    @reward.update!(active: true)
+    post "/api/redemptions", params: { reward_id: @reward.id }.to_json, headers: @headers
+    assert_response :created
+    assert_equal 250, @user.reload.points_balance
+    assert_equal 1, Redemption.count
   end
 
   test "history is scoped to identity and ordered by time then id descending" do

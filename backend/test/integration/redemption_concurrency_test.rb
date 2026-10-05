@@ -25,10 +25,10 @@ class RedemptionConcurrencyTest < ActionDispatch::IntegrationTest
     User.delete_all
   end
 
-  def request_redemption
+  def request_redemption(key = SecureRandom.uuid)
     session = ActionDispatch::Integration::Session.new(Rails.application)
     session.post "/api/redemptions", params: { reward_id: @reward.id }.to_json,
-      headers: { "x-user" => @user.id.to_s, "Content-Type" => "application/json" }
+      headers: { "x-user" => @user.id.to_s, "Content-Type" => "application/json", "Idempotency-Key" => key }
     [session.response.status, session.response.parsed_body]
   end
 
@@ -60,6 +60,25 @@ class RedemptionConcurrencyTest < ActionDispatch::IntegrationTest
     assert_equal 0, @user.reload.points_balance
     assert_equal 2, Redemption.count
     assert_equal 500, Redemption.sum(:points_spent)
+  end
+
+  test "simultaneous duplicate HTTP requests charge once and replay the same result" do
+    key = SecureRandom.uuid
+    gate = Queue.new
+    threads = 4.times.map do
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          gate.pop
+          request_redemption(key)
+        end
+      end
+    end
+    4.times { gate << true }
+    responses = join_threads(threads)
+    assert_equal [201, 201, 201, 201], responses.map(&:first)
+    assert_equal 1, responses.map(&:last).uniq.size
+    assert_equal 250, @user.reload.points_balance
+    assert_equal 1, Redemption.count
   end
 
   test "reward edit holds database lock and redemption reads the committed new cost and name" do
@@ -103,7 +122,7 @@ class RedemptionConcurrencyTest < ActionDispatch::IntegrationTest
       editor.execute("UPDATE users SET points_balance = 100 WHERE id = ?", [@user.id])
       # A request can resolve identity before another request's debit commits.
       assert_equal 500, User.find_by(id: @user.id).points_balance
-      error = assert_raises(Api::Error) { RedeemReward.call(user_id: @user.id, reward_id: @reward.id) }
+      error = assert_raises(Api::Error) { RedeemReward.call(user_id: @user.id, reward_id: @reward.id, idempotency_key: SecureRandom.uuid) }
       assert_equal "insufficient_points", error.code
       assert_equal({ points_balance: 100, points_required: 250 }, error.details)
     end
@@ -118,7 +137,7 @@ class RedemptionConcurrencyTest < ActionDispatch::IntegrationTest
     ApplicationRecord.cache do
       assert Reward.find_by(id: @reward.id).active?
       editor.execute("UPDATE rewards SET active = 0 WHERE id = ?", [@reward.id])
-      error = assert_raises(Api::Error) { RedeemReward.call(user_id: @user.id, reward_id: @reward.id) }
+      error = assert_raises(Api::Error) { RedeemReward.call(user_id: @user.id, reward_id: @reward.id, idempotency_key: SecureRandom.uuid) }
       assert_equal "reward_inactive", error.code
     end
     assert_equal 500, @user.reload.points_balance

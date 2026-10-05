@@ -25,7 +25,14 @@ module Api
       unless fields.empty?
         raise Api::Error.new("invalid_request", "Invalid redemption request.", status: 422, details: { fields: fields })
       end
-      result = RedeemReward.call(user_id: current_user.id, reward_id: body.fetch("reward_id"))
+      key = request.headers["Idempotency-Key"]
+      if key.blank?
+        raise Api::Error.new("missing_idempotency_key", "The Idempotency-Key header is required.", status: 400)
+      end
+      unless Redemption::UUID_V4.match?(key.downcase)
+        raise Api::Error.new("invalid_idempotency_key", "Idempotency-Key must be a UUID v4.", status: 400)
+      end
+      result = RedeemReward.call(user_id: current_user.id, reward_id: body.fetch("reward_id"), idempotency_key: key.downcase)
       render json: { redemption: serialize(result.redemption), points_balance: result.points_balance }, status: :created
     end
 

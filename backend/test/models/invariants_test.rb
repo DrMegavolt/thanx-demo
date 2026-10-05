@@ -1,6 +1,27 @@
 require "test_helper"
 
 class InvariantsTest < ActiveSupport::TestCase
+  test "idempotency keys require a valid replay balance and are unique within a user" do
+    user = create_user
+    reward = create_reward
+    record = Redemption.create!(user: user, reward: reward, reward_name: reward.name, points_spent: 250,
+      idempotency_key: SecureRandom.uuid, points_balance_after: 750)
+    duplicate = record.dup
+    assert_not duplicate.valid?
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save!(validate: false) }
+    [-1, 1.5, nil].each do |balance|
+      record.points_balance_after = balance
+      assert_not record.valid?
+      assert_raises(ActiveRecord::StatementInvalid) do
+        ApplicationRecord.connection.execute("UPDATE redemptions SET points_balance_after = #{balance.nil? ? 'NULL' : balance} WHERE id = #{record.id}")
+      end
+    end
+    [nil, "not-a-uuid", SecureRandom.uuid.upcase].each do |key|
+      assert_raises(ActiveRecord::StatementInvalid) { record.update_column(:idempotency_key, key) }
+    end
+    legacy = Redemption.new(user: user, reward: reward, reward_name: reward.name, points_spent: 250, points_balance_after: 0)
+    assert_not legacy.valid?
+  end
   test "balances are nonnegative integers and user names are required" do
     assert User.new(name: "Alex", points_balance: 0).valid?
     [-1, 1.5, nil].each { |value| assert_not User.new(name: "Alex", points_balance: value).valid? }

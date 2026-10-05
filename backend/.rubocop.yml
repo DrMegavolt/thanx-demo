@@ -1,0 +1,13 @@
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+AllCops:
+  TargetRubyVersion: 3.4
+  Exclude:
+    - db/schema.rb
+    - vendor/**/*
+    - tmp/**/*
+
+# Preserve the repository's existing array style.
+Layout/SpaceInsideArrayLiteralBrackets:
+  EnforcedStyle: no_space
